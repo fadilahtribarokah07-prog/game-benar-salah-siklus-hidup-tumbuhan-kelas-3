@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kamera Benar-Salah: Petualangan Detektif Tumbuhan</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MediaPipe Pose & Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .mirror { transform: scaleX(-1); }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-between p-3 md:p-6 selection:bg-amber-500 selection:text-slate-950">
+
+    <!-- HEADER -->
+    <header class="w-full max-w-4xl text-center py-3 px-4 bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-xl border border-slate-800 mb-4">
+        <h1 class="text-lg md:text-2xl font-black bg-gradient-to-r from-red-400 via-amber-300 to-emerald-400 bg-clip-text text-transparent">
+            🌶️ Kamera Benar-Salah: Petualangan Detektif Tumbuhan
+        </h1>
+        <p class="text-xs md:text-sm text-slate-300 font-medium mt-0.5">IPAS Kelas 3 SD • Misi Menyelamatkan Cuko Pempek</p>
+    </header>
+
+    <!-- CONTAINER UTAMA -->
+    <main class="w-full max-w-4xl flex-1 flex flex-col items-center justify-center">
+
+        <!-- SCREEN 1: WELCOME, INPUT NAMA & PETUNJUK -->
+        <div id="screen-welcome" class="w-full bg-slate-900/90 backdrop-blur-md p-5 md:p-8 rounded-3xl shadow-2xl border border-slate-800 text-center">
+            <div class="text-4xl md:text-5xl mb-2 animate-bounce">🌶️🌱</div>
+            <h2 class="text-xl md:text-3xl font-black mb-1 text-white">Halo, Detektif Cilik!</h2>
+            <p class="text-slate-400 text-xs md:text-sm mb-5">Selamat datang di Misi Menyelamatkan Cuko Pempek melalui Siklus Hidup Tanaman Cabai.</p>
+            
+            <!-- FORM INPUT NAMA -->
+            <div class="mb-5 text-left max-w-lg mx-auto">
+                <label for="player-name-input" class="block text-xs font-bold text-amber-300 mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🕵️‍♂️</span> Nama Detektif Cilik:
+                </label>
+                <input 
+                    type="text" 
+                    id="player-name-input" 
+                    placeholder="Ketik nama kamu di sini..." 
+                    class="w-full px-4 py-3 bg-slate-950 border-2 border-slate-700 rounded-2xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition text-sm font-semibold shadow-inner"
+                    required
+                />
+            </div>
+
+            <!-- PETUNJUK BERMAIN -->
+            <div class="bg-slate-950/80 p-4 md:p-5 rounded-2xl text-left text-xs md:text-sm mb-6 border border-slate-800 space-y-2 max-w-lg mx-auto shadow-inner">
+                <p class="font-bold text-amber-400 flex items-center gap-2 text-sm border-b border-slate-800 pb-2">
+                    <span>📋</span> PETUNJUK BERMAIN:
+                </p>
+                <ol class="list-decimal list-inside space-y-1.5 text-slate-300 leading-relaxed">
+                    <li>Ketik nama kamu di kolom di atas.</li>
+                    <li>Berdirilah di depan kamera hingga dada & badanmu terlihat.</li>
+                    <li>Baca soal IPAS yang muncul di bagian atas layar.</li>
+                    <li>Geser posisi badan ke <strong>KIRI</strong> untuk <strong class="text-emerald-400">BENAR</strong> atau ke <strong>KANAN</strong> untuk <strong class="text-rose-400">SALAH</strong>.</li>
+                    <li>Atau gunakan tombol <span class="text-amber-300 font-bold">Klik Benar / Salah</span> jika bermain di HP atau tombol tidak merespons.</li>
+                </ol>
+            </div>
+
+            <button onclick="startApp()" class="w-full max-w-lg py-3.5 md:py-4 bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 hover:from-red-500 hover:via-amber-500 hover:to-emerald-500 text-white font-black rounded-2xl shadow-xl shadow-red-950/50 transition transform active:scale-95 text-base md:text-lg">
+                Mulai Misi Sekarang 🚀
+            </button>
+        </div>
+
+        <!-- SCREEN 2: GAMEPLAY & KAMERA -->
+        <div id="screen-game" class="w-full hidden flex flex-col items-center">
+            
+            <!-- PANEL STATUS -->
+            <div id="game-info-bar" class="w-full flex justify-between items-center bg-slate-900/90 px-4 py-2.5 rounded-2xl mb-3 border border-slate-800 text-xs md:text-sm font-bold shadow-lg">
+                <div><span class="text-slate-400 font-normal">Detektif:</span> <span id="display-player-name" class="text-amber-300">Siswa</span></div>
+                <div><span class="text-slate-400 font-normal">Soal:</span> <span id="current-q-num" class="text-emerald-400">1</span>/10</div>
+                <div><span class="text-slate-400 font-normal">Waktu:</span> <span id="timer-display" class="text-amber-400">15</span>s</div>
+                <div><span class="text-slate-400 font-normal">Skor:</span> <span id="score-display" class="text-cyan-400">0</span></div>
+            </div>
+
+            <!-- PERNYAAN SOAL -->
+            <div id="question-box" class="w-full bg-slate-900 p-4 rounded-2xl mb-3 border border-slate-800 text-center shadow-xl">
+                <p id="question-text" class="text-sm md:text-lg font-bold text-white leading-relaxed">Memuat soal...</p>
+            </div>
+
+            <!-- LAYOUT KAMERA & TOMBOL -->
+            <div class="w-full grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                
+                <!-- PANEL KIRI (BENAR) -->
+                <div class="bg-emerald-950/80 border-2 border-emerald-500/50 p-3 md:p-4 rounded-2xl text-center flex flex-col justify-center items-center h-28 md:h-96 shadow-lg shadow-emerald-950/50">
+                    <span class="text-2xl md:text-4xl mb-1">👈</span>
+                    <h3 class="font-extrabold text-emerald-400 text-xs md:text-sm tracking-wider">GESER KIRI</h3>
+                    <p class="text-base md:text-xl font-black text-emerald-300 uppercase tracking-widest mt-0.5">BENAR</p>
+                    <button onclick="manualAnswer(true)" class="mt-2 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow">
+                        Klik Benar
+                    </button>
+                </div>
+
+                <!-- PANEL TENGAH (WEBCAM) -->
+                <div class="md:col-span-2 relative bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 h-60 md:h-96 flex items-center justify-center shadow-2xl">
+                    <video id="webcam" class="absolute inset-0 w-full h-full object-cover mirror" autoplay playsinline muted></video>
+                    <canvas id="output_canvas" class="absolute inset-0 w-full h-full object-cover mirror pointer-events-none"></canvas>
+                    
+                    <div class="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold flex items-center gap-1.5 border border-slate-800">
+                        <span id="cam-status-dot" class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                        <span id="cam-status-text" class="text-slate-300">Menyiapkan Kamera...</span>
+                    </div>
+
+                    <!-- FEEDBACK OVERLAY -->
+                    <div id="feedback-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center hidden z-20 p-4 text-center">
+                        <div id="feedback-icon" class="text-4xl md:text-5xl mb-1">✅</div>
+                        <h3 id="feedback-title" class="text-xl md:text-2xl font-black mb-1">HEBAT!</h3>
+                        <p id="feedback-desc" class="text-xs md:text-sm text-slate-300 max-w-sm bg-slate-900 p-3 rounded-xl border border-slate-800 leading-relaxed mt-1">
+                            Penjelasan...
+                        </p>
+                    </div>
+                </div>
+
+                <!-- PANEL KANAN (SALAH) -->
+                <div class="bg-rose-950/80 border-2 border-rose-500/50 p-3 md:p-4 rounded-2xl text-center flex flex-col justify-center items-center h-28 md:h-96 shadow-lg shadow-rose-950/50">
+                    <span class="text-2xl md:text-4xl mb-1">👉</span>
+                    <h3 class="font-extrabold text-rose-400 text-xs md:text-sm tracking-wider">GESER KANAN</h3>
+                    <p class="text-base md:text-xl font-black text-rose-300 uppercase tracking-widest mt-0.5">SALAH</p>
+                    <button onclick="manualAnswer(false)" class="mt-2 px-3 py-1 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white rounded-xl text-xs font-bold transition shadow">
+                        Klik Salah
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SCREEN 3: HASIL & APRESIASI -->
+        <div id="screen-result" class="w-full bg-slate-900/90 backdrop-blur-md p-5 md:p-8 rounded-3xl shadow-2xl border border-slate-800 text-center hidden">
+            <div class="text-4xl md:text-5xl mb-2 animate-bounce">🏆🎉</div>
+            <h2 class="text-xl md:text-3xl font-black mb-2 text-white">
+                Misi Selesai, Detektif <span id="res-player-name" class="text-amber-300">Siswa</span>!
+            </h2>
+            
+            <!-- KATAP APRESIASI -->
+            <div class="bg-slate-950/80 p-4 md:p-5 rounded-2xl border border-slate-800 mb-5 text-xs md:text-sm text-slate-200 leading-relaxed max-w-2xl mx-auto text-left shadow-inner space-y-1.5">
+                <p class="font-bold text-amber-300 flex items-center gap-1.5 text-sm md:text-base border-b border-slate-800 pb-1.5">
+                    <span>🌟</span> APRESIASI UNTUK DETEKTIF HEBAT:
+                </p>
+                <p class="text-slate-300">
+                    Selamat dan terima kasih telah berjuang menyelesaikan seluruh tantangan IPAS! Kamu terbukti sebagai <strong>Detektif Tumbuhan Cerdas</strong> yang sangat memahami siklus hidup cabai serta bahan pembuat cuko pempek Palembang. Teruslah semangat belajar!
+                </p>
+            </div>
+            
+            <!-- REKAPITULASI SKOR -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-6 max-w-2xl mx-auto">
+                <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800">
+                    <p class="text-[11px] text-slate-400 font-medium">Jawaban Benar</p>
+                    <p id="res-correct" class="text-xl md:text-2xl font-black text-emerald-400 mt-0.5">0</p>
+                </div>
+                <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800">
+                    <p class="text-[11px] text-slate-400 font-medium">Jawaban Salah</p>
+                    <p id="res-wrong" class="text-xl md:text-2xl font-black text-rose-400 mt-0.5">0</p>
+                </div>
+                <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800">
+                    <p class="text-[11px] text-slate-400 font-medium">Tidak Terjawab</p>
+                    <p id="res-skipped" class="text-xl md:text-2xl font-black text-amber-400 mt-0.5">0</p>
+                </div>
+                <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800">
+                    <p class="text-[11px] text-slate-400 font-medium">Skor Akhir</p>
+                    <p id="res-score" class="text-xl md:text-2xl font-black text-cyan-400 mt-0.5">0 / 100</p>
+                </div>
+            </div>
+
+            <!-- STATUS PENGIRIMAN KE GOOGLE SHEETS -->
+            <div id="sheets-send-status" class="mb-4 text-xs md:text-sm font-semibold text-amber-300 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 max-w-md mx-auto flex items-center justify-center gap-2 hidden">
+                <span class="animate-spin">⏳</span> Menghubungkan & menyimpan hasil ke Google Sheets Guru...
+            </div>
+
+            <button onclick="location.reload()" class="px-8 py-3.5 bg-gradient-to-r from-red-600 via-amber-600 to-emerald-600 hover:from-red-500 hover:via-amber-500 hover:to-emerald-500 text-white font-black rounded-2xl shadow-xl transition transform active:scale-95 text-sm md:text-base">
+                Mainkan Ulang Misi 🔄
+            </button>
+        </div>
+
+    </main>
+
+    <!-- FOOTER (KARYA & SOSIAL MEDIA) -->
+    <footer class="text-center text-xs text-slate-500 mt-4 space-y-2 py-3 border-t border-slate-800/60 w-full max-w-4xl">
+        <p class="font-medium text-slate-400">IPAS Kelas 3 SD • Siklus Hidup Tanaman Cabai</p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-2">
+            <span class="text-amber-400 font-bold text-xs md:text-sm">✨ Karya: Fadilah Tri Barokah ✨</span>
+            <div class="flex items-center gap-2 sm:ml-2">
+                <!-- INSTAGRAM -->
+                <a href="https://www.instagram.com/fadilah_tri_barokah?utm_source=qr&xtok=MTFqOG1scWF6M21vcw==" target="_blank" rel="noopener noreferrer" class="p-1.5 bg-slate-900 hover:bg-pink-600 text-pink-400 hover:text-white rounded-full transition border border-slate-800 flex items-center justify-center" title="Instagram Fadilah Tri Barokah">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                </a>
+                <!-- YOUTUBE -->
+                <a href="https://youtube.com/@fadilahtribarokah0779?si=PEJ8kxPIwz6Sxp2D" target="_blank" rel="noopener noreferrer" class="p-1.5 bg-slate-900 hover:bg-red-600 text-red-500 hover:text-white rounded-full transition border border-slate-800 flex items-center justify-center" title="YouTube Fadilah Tri Barokah">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- LOGIKA GAMEPLAY, POSE TRACKING, & SCRIPT INTEGRASI -->
+    <script>
+        // MASUKKAN URL HASIL DEPLOY APPS SCRIPT DARI GOOGLE SHEETS DI SINI JIKA INGIN DISIMPAN DI GOOGLE SHEETS
+        const GOOGLE_SCRIPT_URL = "";
+
+        const questions = [
+            { text: "Biji cabai merupakan tahap awal dalam siklus hidup tanaman cabai sebelum menjadi kecambah.", answer: true, explanation: "Benar! Siklus hidup tanaman cabai dimulai dari biji yang berkecambah saat mendapatkan air dan suhu tanah yang sesuai." },
+            { text: "Tanaman cabai dapat tumbuh lebat dan sehat meskipun disimpan di tempat gelap tanpa cahaya matahari.", answer: false, explanation: "Salah! Tanaman cabai memerlukan cahaya matahari untuk proses fotosintesis agar dapat tumbuh kuat dan berbuah." },
+            { text: "Bunga pada tanaman cabai berfungsi sebagai organ reproduksi yang nantinya akan berkembang menjadi buah cabai.", answer: true, explanation: "Benar! Setelah bunga mengalami penyerbukan, bakal buah akan berkembang menjadi buah cabai." },
+            { text: "Buah cabai yang matang mengandung biji yang bisa ditanam kembali untuk memulai siklus hidup baru.", answer: true, explanation: "Benar! Biji di dalam buah cabai matang berfungsi sebagai calon tumbuhan baru dalam siklus hidup yang berkelanjutan." },
+            { text: "Penyiraman air berlebihan hingga tanah tergenang terus-menerus akan membuat akar cabai tumbuh makin sehat.", answer: false, explanation: "Salah! Air tergenang berlebihan dapat menyebabkan akar membusuk dan tanaman mati karena kekurangan oksigen." },
+            { text: "Cabai merupakan salah satu bahan utama pemberi rasa pedas khas pada kuah cuko pempek Palembang.", answer: true, explanation: "Benar! Cabai rawit diulek bersama gula merah, asam jawa, dan bawang putih untuk menghasilkan rasa khas cuko pempek." },
+            { text: "Tahap kecambah (sprout) terjadi sebelum biji cabai menyerap air dari dalam tanah.", answer: false, explanation: "Salah! Biji harus menyerap air terlebih dahulu agar kulit biji pecah dan calon tunas dapat keluar." },
+            { text: "Pupuk dan nutrisi tanah membantu tanaman cabai tumbuh lebih kokoh dan menghasilkan buah yang lebat.", answer: true, explanation: "Benar! Nutrisi tanah seperti nitrogen, fosfor, dan kalium sangat penting untuk pertumbuhan daun dan buah cabai." },
+            { text: "Siklus hidup tanaman cabai terputus dan berhenti total saat buah cabai dipetik dari pohonnya.", answer: false, explanation: "Salah! Biji di dalam buah cabai yang dipetik dapat ditanam kembali untuk generasi baru." },
+            { text: "Jika tanaman cabai terserang hama kutu daun, pertumbuhan daun dan produksi buah dapat terganggu.", answer: true, explanation: "Benar! Hama menyerap cairan nutrisi dari daun cabai, sehingga mengganggu fotosintesis." }
+        ];
+
+        let playerName = "Detektif";
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let correctCount = 0;
+        let wrongCount = 0;
+        let skippedCount = 0;
+        let gameActive = false;
+        let timerInterval = null;
+        let timeLeft = 15;
+        let isAnsweringLocked = false;
+
+        let videoElement = document.getElementById('webcam');
+        let canvasElement = document.getElementById('output_canvas');
+        let canvasCtx = canvasElement.getContext('2d');
+        let camera = null;
+
+        function initCameraAndPose() {
+            const pose = new Pose({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+            });
+
+            pose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            pose.onResults(onPoseResults);
+
+            camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await pose.send({ image: videoElement });
+                },
+                width: 640,
+                height: 480
+            });
+
+            camera.start()
+                .then(() => {
+                    document.getElementById('cam-status-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
+                    document.getElementById('cam-status-text').innerText = "Kamera Aktif!";
+                })
+                .catch(err => {
+                    console.error("Akses kamera terhalang:", err);
+                    document.getElementById('cam-status-text').innerText = "Gunakan Tombol Manual";
+                });
+        }
+
+        let lastGestureTime = 0;
+        function onPoseResults(results) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.poseLandmarks && gameActive && !isAnsweringLocked) {
+                const landmarks = results.poseLandmarks;
+                const leftShoulder = landmarks[11];
+                const rightShoulder = landmarks[12];
+                const shoulderX = (leftShoulder.x + rightShoulder.x) / 2;
+
+                const now = Date.now();
+                if (now - lastGestureTime > 2500) {
+                    if (shoulderX < 0.35) {
+                        lastGestureTime = now;
+                        manualAnswer(true); // Kiri = Benar
+                    } else if (shoulderX > 0.65) {
+                        lastGestureTime = now;
+                        manualAnswer(false); // Kanan = Salah
+                    }
+                }
+            }
+            canvasCtx.restore();
+        }
+
+        function startApp() {
+            const nameInput = document.getElementById('player-name-input');
+            const enteredName = nameInput.value.trim();
+
+            if (!enteredName) {
+                alert("Silakan ketik nama kamu terlebih dahulu sebelum memulai permainan!");
+                nameInput.focus();
+                return;
+            }
+
+            playerName = enteredName;
+            document.getElementById('display-player-name').innerText = playerName;
+
+            document.getElementById('screen-welcome').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            initCameraAndPose();
+            gameActive = true;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                endGame();
+                return;
+            }
+
+            isAnsweringLocked = false;
+            timeLeft = 15;
+            document.getElementById('current-q-num').innerText = currentQuestionIndex + 1;
+            document.getElementById('question-text').innerText = `"${questions[currentQuestionIndex].text}"`;
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('feedback-overlay').classList.add('hidden');
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-display').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    manualAnswer(null);
+                }
+            }, 1000);
+        }
+
+        function manualAnswer(userChoice) {
+            if (!gameActive || isAnsweringLocked) return;
+            isAnsweringLocked = true;
+            clearInterval(timerInterval);
+
+            const currentQ = questions[currentQuestionIndex];
+            const isCorrect = (userChoice === currentQ.answer);
+
+            if (userChoice === null) {
+                skippedCount++;
+            } else if (isCorrect) {
+                score += 10;
+                correctCount++;
+            } else {
+                wrongCount++;
+            }
+
+            showFeedback(isCorrect, currentQ.explanation, userChoice);
+        }
+
+        function showFeedback(isCorrect, explanation, userChoice) {
+            const overlay = document.getElementById('feedback-overlay');
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            const desc = document.getElementById('feedback-desc');
+
+            if (userChoice === null) {
+                icon.innerText = "⏳";
+                title.innerText = "WAKTU HABIS!";
+                title.className = "text-xl md:text-2xl font-black mb-1 text-amber-400";
+            } else if (isCorrect) {
+                icon.innerText = "🎉";
+                title.innerText = "JAWABAN BENAR!";
+                title.className = "text-xl md:text-2xl font-black mb-1 text-emerald-400";
+            } else {
+                icon.innerText = "❌";
+                title.innerText = "KURANG TEPAT!";
+                title.className = "text-xl md:text-2xl font-black mb-1 text-rose-400";
+            }
+
+            desc.innerText = explanation;
+            overlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                loadQuestion();
+            }, 3500);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            
+            if (videoElement && videoElement.srcObject) {
+                videoElement.srcObject.getTracks().forEach(track => track.stop());
+            }
+
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-result').classList.remove('hidden');
+
+            document.getElementById('res-player-name').innerText = playerName;
+            document.getElementById('res-correct').innerText = correctCount;
+            document.getElementById('res-wrong').innerText = wrongCount;
+            document.getElementById('res-skipped').innerText = skippedCount;
+            document.getElementById('res-score').innerText = score;
+
+            sendDataToGoogleSheets();
+        }
+
+        function sendDataToGoogleSheets() {
+            const statusBox = document.getElementById('sheets-send-status');
+
+            if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.trim() === "" || GOOGLE_SCRIPT_URL.includes("MASUKKAN_URL")) {
+                statusBox.classList.add('hidden');
+                return;
+            }
+
+            statusBox.classList.remove('hidden');
+
+            const payload = {
+                nama: playerName,
+                skor: score,
+                benar: correctCount,
+                salah: wrongCount,
+                tidak_terjawab: skippedCount,
+                waktu: new Date().toLocaleString('id-ID')
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                statusBox.className = "mb-4 text-xs md:text-sm font-bold text-emerald-400 bg-slate-950/80 p-2.5 rounded-xl border border-emerald-500/40 max-w-md mx-auto flex items-center justify-center gap-1.5";
+                statusBox.innerHTML = "✅ Hasil pengerjaan berhasil dikirim ke Google Sheets Guru!";
+            })
+            .catch(err => {
+                console.error("Gagal mengirim data:", err);
+                statusBox.className = "mb-4 text-xs md:text-sm font-semibold text-rose-400 bg-slate-950/80 p-2.5 rounded-xl border border-rose-500/40 max-w-md mx-auto";
+                statusBox.innerHTML = "⚠️ Gagal mengirim otomatis. Harap tunjukkan layar ini ke Guru.";
+            });
+        }
+    </script>
+</body>
+</html>
